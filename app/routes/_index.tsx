@@ -40,18 +40,17 @@ export default function Index() {
               </div>
             </div>
 
-            {/* Main Heading */}
-            <h2 className="text-5xl md:text-7xl font-bold text-white mb-8">
-              Where Developers
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                Share & Learn
+            {/* Headline */}
+            <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
+              Share Your Code,<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                Build Your Story
               </span>
             </h2>
 
-            {/* Description */}
-            <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-              CodeGram is the social platform built for developers. Share code snippets, 
-              create documentation, post developer stories, and connect with fellow coders worldwide.
+            <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+              Connect with developers worldwide. Share code snippets, document your projects, 
+              and collaborate on bug fixes in a beautiful, social environment.
             </p>
 
             {/* GitHub Sign In Button */}
@@ -79,66 +78,35 @@ export default function Index() {
           <div className="grid md:grid-cols-3 gap-8">
             {/* Code Snippets */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Code Snippets</h3>
-              <p className="text-gray-300">
-                Share and discover code snippets with syntax highlighting and live preview support.
-              </p>
+              <p className="text-gray-300">Share your code snippets with syntax highlighting and get feedback from the community.</p>
             </div>
 
             {/* Documentation */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Documentation</h3>
-              <p className="text-gray-300">
-                Create and share detailed project documentation with markdown support.
-              </p>
+              <p className="text-gray-300">Create and share comprehensive documentation for your projects with markdown support.</p>
             </div>
 
-            {/* Developer Stories */}
+            {/* Bug Tracking */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Developer Bugs</h3>
-              <p className="text-gray-300">
-                Share quick updates and progress with temporary stories that disappear after 24 hours.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="relative py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h3 className="text-3xl font-bold text-white mb-12">
-              Join the Growing Community
-            </h3>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-blue-400 mb-2">10K+</div>
-                <div className="text-gray-300">Developers</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-green-400 mb-2">50K+</div>
-                <div className="text-gray-300">Code Snippets</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-purple-400 mb-2">25K+</div>
-                <div className="text-gray-300">Documentation</div>
-              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Bug Reports</h3>
+              <p className="text-gray-300">Report bugs, track issues, and collaborate on solutions with other developers.</p>
             </div>
           </div>
         </div>

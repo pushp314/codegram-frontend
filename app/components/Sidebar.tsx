@@ -16,10 +16,13 @@ export function Sidebar({ user }: SidebarProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Updated: Added "Feed", "Notifications", and "Profile" as primary navigation, made "Explore" more prominent
   const navigation = [
-    { name: 'Home', href: '/home', icon: HomeIcon },
-    { name: 'Search', href: '/search', icon: SearchIcon },
+    { name: 'Feed', href: '/home', icon: HomeIcon },
     { name: 'Explore', href: '/explore', icon: ExploreIcon },
+    { name: 'Search', href: '/search', icon: SearchIcon },
+    { name: 'Notifications', href: '/notifications', icon: NotificationsIcon },
+    { name: 'Profile', href: `/profile/${user.username}`, icon: ProfileIcon },
     { name: 'Docs', href: '/docs', icon: DocsIcon },
   ];
 
@@ -32,6 +35,7 @@ export function Sidebar({ user }: SidebarProps) {
   const createItems = [
     { name: 'Code Snippet', href: '/snippets/new', icon: CodeIcon },
     { name: 'Documentation', href: '/docs/new', icon: DocsIcon },
+    // Add more create options if needed
   ];
 
   return (
@@ -79,7 +83,7 @@ export function Sidebar({ user }: SidebarProps) {
             </button>
             
             {isCreateOpen && !isCollapsed && (
-              <div className="absolute left-0 top-full mt-2 w-full bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden">
+              <div className="absolute left-0 top-full mt-2 w-full bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden z-20">
                 {createItems.map((item) => (
                   <Link
                     key={item.name}
@@ -94,15 +98,6 @@ export function Sidebar({ user }: SidebarProps) {
               </div>
             )}
           </div>
-
-          {/* Profile */}
-          <Link
-            to={`/profile/${user.username}`}
-            className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-slate-800 hover:text-white"
-          >
-            <img className="w-5 h-5 rounded-full" src={user.avatar} alt={user.name} />
-            {!isCollapsed && <span>Profile</span>}
-          </Link>
         </nav>
 
         {/* More Section */}
@@ -119,7 +114,7 @@ export function Sidebar({ user }: SidebarProps) {
             </button>
             
             {isMoreOpen && !isCollapsed && (
-              <div className="absolute left-0 bottom-full mb-2 w-full bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden">
+              <div className="absolute left-0 bottom-full mb-2 w-full bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden z-20">
                 {moreItems.map((item) => (
                   item.isAction ? (
                     <Form key={item.name} method="post" action="/logout">
@@ -225,6 +220,23 @@ function LogoutIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+  );
+}
+
+function NotificationsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405C18.37 15.197 18 14.627 18 14V11a6 6 0 00-5-5.917V5a2 2 0 10-4 0v.083A6 6 0 004 11v3c0 .627-.37 1.197-.595 1.595L2 17h5m5 0v1a3 3 0 01-6 0v-1m6 0h-6" />
+    </svg>
+  );
+}
+
+function ProfileIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A7 7 0 0012 21a7 7 0 006.879-3.196A5.001 5.001 0 0012 13c-2.674 0-5 2.239-5 5 0 .538.083 1.054.238 1.535z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 13a5 5 0 100-10 5 5 0 000 10z" />
     </svg>
   );
 }
