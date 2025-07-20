@@ -5,9 +5,12 @@ import {
   Scripts,
   ScrollRestoration,
   LiveReload,
+  useLoaderData,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { Toaster } from "react-hot-toast";
+import { getUserFromSession } from "~/utils/auth.server";
 
 import "./tailwind.css";
 
@@ -24,6 +27,15 @@ export const links: LinksFunction = () => [
   },
 ];
 
+export async function loader({ request }: LoaderFunctionArgs) {
+  try {
+    const user = await getUserFromSession(request);
+    return json({ user });
+  } catch {
+    return json({ user: null });
+  }
+}
+
 export default function App() {
   return (
     <html lang="en" className="h-full">
@@ -33,20 +45,22 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body className="h-full">
+      <body className="h-full bg-gray-50">
         <Outlet />
         <Toaster 
-          position="top-right"
+          position="top-center"
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#363636',
+              background: '#1f2937',
               color: '#fff',
+              borderRadius: '12px',
+              padding: '12px 16px',
             },
             success: {
               duration: 3000,
               iconTheme: {
-                primary: '#4ade80',
+                primary: '#10b981',
                 secondary: '#fff',
               },
             },

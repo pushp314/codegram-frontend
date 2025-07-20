@@ -1,7 +1,10 @@
 import { LoaderFunctionArgs, json } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
 import { requireAuth } from "~/utils/auth.server";
-import { Plus, Code, FileText, Bug } from "lucide-react";
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Code, FileText } from "lucide-react";
+import { useState } from "react";
+import BugStories from "~/components/Bugs/BugStories";
+import AppLayout from "~/components/Layout/AppLayout";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireAuth(request);
@@ -9,288 +12,354 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const cookie = request.headers.get("Cookie");
 
   try {
-    const [snippetsRes, bugsRes, trendsRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/api/snippets/feed?page=1&limit=10`, {
+    const [feedRes, storiesRes, suggestionsRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/api/feed?page=1&limit=10`, {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
-      fetch(`${BACKEND_URL}/api/bugs/feed`, {
+      fetch(`${BACKEND_URL}/api/stories/active`, {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
-      fetch(`${BACKEND_URL}/api/trending/tags`, {
+      fetch(`${BACKEND_URL}/api/users/suggestions`, {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
     ]);
 
-    const snippets = snippetsRes.ok ? await snippetsRes.json() : { data: [] };
-    const bugs = bugsRes.ok ? await bugsRes.json() : { data: [] };
-    const trends = trendsRes.ok ? await trendsRes.json() : { tags: [] };
+    const feed = feedRes.ok ? await feedRes.json() : { data: [] };
+    const stories = storiesRes.ok ? await storiesRes.json() : { data: [] };
+    const suggestions = suggestionsRes.ok ? await suggestionsRes.json() : { data: [] };
 
-    return json({ user, snippets, bugs, trends });
+    return json({ user, feed, stories, suggestions });
   } catch (error) {
-    return json({ user, snippets: { data: [] }, bugs: { data: [] }, trends: { tags: [] } });
+    return json({ 
+      user, 
+      feed: { data: [] }, 
+      stories: { data: [] }, 
+      suggestions: { data: [] } 
+    });
   }
 }
 
 export default function Home() {
-  const { user, snippets, bugs, trends } = useLoaderData<typeof loader>();
+  const { user, feed, stories, suggestions } = useLoaderData<typeof loader>();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/home" className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Code className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-gray-900">CodeGram</span>
-              </Link>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/snippets/new"
-                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>New Snippet</span>
-              </Link>
-              
-              <Link to={`/u/${user.username}`}>
-                <img
-                  className="h-8 w-8 rounded-full"
-                  src={user.avatar}
-                  alt={user.name}
-                />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <AppLayout user={user}>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Feed */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Stories/Bugs Section */}
-            {bugs.data.length > 0 && (
-              <div className="bg-white rounded-xl border shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Bug className="w-5 h-5 mr-2 text-red-500" />
-                  Developer Stories
-                </h2>
-                <div className="flex space-x-4 overflow-x-auto pb-2">
-                  {bugs.data.map((bug: any) => (
-                    <Link
-                      key={bug.id}
-                      to={`/bugs/${bug.id}`}
-                      className="flex-shrink-0 cursor-pointer group"
-                    >
-                      <div className="w-16 h-16 rounded-full ring-2 ring-orange-400 p-0.5 group-hover:ring-orange-500">
-                        <img
-                          src={bug.author.avatar}
-                          alt={bug.author.username}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      </div>
-                      <p className="text-xs text-center mt-2 text-gray-600 truncate w-16">
-                        {bug.author.username}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Stories */}
+            <BugStories stories={stories.data} currentUser={user} />
 
-            {/* Create New Content */}
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <img
-                  className="h-10 w-10 rounded-full"
-                  src={user.avatar}
-                  alt={user.name}
-                />
-                <div className="flex-1">
-                  <p className="text-gray-700">What are you working on, {user.name}?</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link
-                  to="/snippets/new"
-                  className="flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all group"
-                >
-                  <Code className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
-                  <span className="text-gray-600 group-hover:text-blue-600">Share Code</span>
-                </Link>
-                
-                <Link
-                  to="/docs/new"
-                  className="flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all group"
-                >
-                  <FileText className="w-5 h-5 text-gray-400 group-hover:text-green-500" />
-                  <span className="text-gray-600 group-hover:text-green-600">Write Docs</span>
-                </Link>
-                
-                <Link
-                  to="/bugs/new"
-                  className="flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-400 hover:bg-orange-50 transition-all group"
-                >
-                  <Bug className="w-5 h-5 text-gray-400 group-hover:text-orange-500" />
-                  <span className="text-gray-600 group-hover:text-orange-600">Share Update</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Snippets Feed */}
+            {/* Feed Posts */}
             <div className="space-y-6">
-              {snippets.data.length === 0 ? (
-                <div className="bg-white rounded-xl border shadow-sm p-12 text-center">
-                  <Code className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No snippets yet</h3>
-                  <p className="text-gray-600 mb-6">
-                    Start following other developers or create your first snippet to see content here.
-                  </p>
-                  <div className="space-x-4">
-                    <Link
-                      to="/snippets/new"
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Create Snippet
-                    </Link>
-                    <Link
-                      to="/explore"
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Explore
-                    </Link>
-                  </div>
-                </div>
+              {feed.data.length === 0 ? (
+                <EmptyFeed user={user} />
               ) : (
-                snippets.data.map((snippet: any) => (
-                  <div key={snippet.id} className="bg-white rounded-xl border shadow-sm">
-                    {/* Snippet content will be rendered by SnippetCard component */}
-                    <div className="p-6">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <Link to={`/u/${snippet.author.username}`}>
-                          <img
-                            src={snippet.author.avatar}
-                            alt={snippet.author.name}
-                            className="w-10 h-10 rounded-full"
-                          />
-                        </Link>
-                        <div>
-                          <Link
-                            to={`/u/${snippet.author.username}`}
-                            className="font-semibold text-gray-900 hover:text-blue-600"
-                          >
-                            {snippet.author.name}
-                          </Link>
-                          <p className="text-sm text-gray-500">@{snippet.author.username}</p>
-                        </div>
-                        <span className="text-sm text-gray-500 ml-auto">
-                          {new Date(snippet.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      
-                      <Link to={`/snippets/${snippet.id}`}>
-                        <h2 className="text-xl font-bold text-gray-900 mb-2 hover:text-blue-600">
-                          {snippet.title}
-                        </h2>
-                      </Link>
-                      
-                      <p className="text-gray-600 mb-4">{snippet.description}</p>
-                      
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {snippet.tags?.map((tag: string) => (
-                          <span
-                            key={tag}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                      
-                      <div className="flex items-center space-x-6 text-gray-500">
-                        <span className="flex items-center space-x-1">
-                          <span>❤️</span>
-                          <span>{snippet.likes || 0}</span>
-                        </span>
-                        <span className="flex items-center space-x-1">
-                          <span>💬</span>
-                          <span>{snippet.comments || 0}</span>
-                        </span>
-                        <Link
-                          to={`/snippets/${snippet.id}`}
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          View Code
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
+                feed.data.map((post: any) => (
+                  <FeedPost key={post.id} post={post} currentUser={user} />
                 ))
               )}
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Trending Tags */}
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Trending Tags</h3>
-              <div className="space-y-2">
-                {trends.tags.slice(0, 10).map((tag: any, index: number) => (
-                  <Link
-                    key={tag.name}
-                    to={`/explore?tag=${tag.name}`}
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50"
-                  >
-                    <span className="text-gray-700">#{tag.name}</span>
-                    <span className="text-sm text-gray-500">{tag.count}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
+          {/* Right Sidebar */}
+          <div className="hidden lg:block space-y-6">
+            {/* User Profile Card */}
+            <UserProfileCard user={user} />
+            
+            {/* Suggestions */}
+            <SuggestionsCard suggestions={suggestions.data} />
 
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <Link
-                  to="/snippets/new"
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors"
-                >
-                  Create Snippet
-                </Link>
-                <Link
-                  to="/docs/new"
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors"
-                >
-                  Write Documentation
-                </Link>
-                <Link
-                  to="/explore"
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-colors"
-                >
-                  Explore Content
-                </Link>
-                <Link
-                  to="/settings"
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors"
-                >
-                  Settings
-                </Link>
-              </div>
-            </div>
+            {/* Trending Tags */}
+            <TrendingCard />
           </div>
         </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
+  const [isLiked, setIsLiked] = useState(post.isLiked);
+  const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
+  const [showComments, setShowComments] = useState(false);
+
+  const getPostIcon = (type: string) => {
+    switch (type) {
+      case 'snippet': return <Code className="w-4 h-4" />;
+      case 'doc': return <FileText className="w-4 h-4" />;
+      default: return <Code className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      {/* Post Header */}
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center space-x-3">
+          <Link to={`/u/${post.author.username}`}>
+            <img
+              src={post.author.avatar}
+              alt={post.author.name}
+              className="w-10 h-10 rounded-full ring-2 ring-gray-100"
+            />
+          </Link>
+          <div>
+            <div className="flex items-center space-x-2">
+              <Link
+                to={`/u/${post.author.username}`}
+                className="font-semibold text-gray-900 hover:text-purple-600 text-sm"
+              >
+                {post.author.username}
+              </Link>
+              <div className="flex items-center space-x-1 text-purple-600">
+                {getPostIcon(post.type)}
+                <span className="text-xs font-medium">{post.type}</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</p>
+          </div>
+        </div>
+        <button className="p-2 hover:bg-gray-100 rounded-full">
+          <MoreHorizontal className="w-5 h-5 text-gray-500" />
+        </button>
+      </div>
+
+      {/* Post Content */}
+      <div className="px-4 pb-3">
+        <Link to={`/${post.type}s/${post.id}`}>
+          <h3 className="font-semibold text-gray-900 mb-2 hover:text-purple-600">
+            {post.title}
+          </h3>
+          {post.description && (
+            <p className="text-gray-700 text-sm mb-3 line-clamp-3">{post.description}</p>
+          )}
+        </Link>
+        
+        {/* Tags */}
+        {post.tags && post.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {post.tags.slice(0, 3).map((tag: string) => (
+              <span
+                key={tag}
+                className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Code Preview for Snippets */}
+      {post.type === 'snippet' && post.content && (
+        <div className="mx-4 mb-4 bg-gray-900 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-gray-800 text-gray-300 text-xs font-medium">
+            {post.language}
+          </div>
+          <pre className="p-4 text-sm text-gray-100 overflow-x-auto max-h-40">
+            <code>{post.content.substring(0, 200)}...</code>
+          </pre>
+        </div>
+      )}
+
+      {/* Post Actions */}
+      <div className="px-4 py-3 border-t border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setIsLiked(!isLiked)}
+              className={`flex items-center space-x-1 transition-colors ${
+                isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+              }`}
+            >
+              <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
+              <span className="text-sm font-medium">{post.likesCount || 0}</span>
+            </button>
+            
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className="flex items-center space-x-1 text-gray-500 hover:text-blue-500 transition-colors"
+            >
+              <MessageCircle className="w-6 h-6" />
+              <span className="text-sm font-medium">{post.commentsCount || 0}</span>
+            </button>
+            
+            <button className="text-gray-500 hover:text-gray-700 transition-colors">
+              <Send className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <button
+            onClick={() => setIsBookmarked(!isBookmarked)}
+            className={`transition-colors ${
+              isBookmarked ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600'
+            }`}
+          >
+            <Bookmark className={`w-6 h-6 ${isBookmarked ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+
+        {/* Like count */}
+        {post.likesCount > 0 && (
+          <p className="text-sm font-medium text-gray-900 mt-2">
+            {post.likesCount} {post.likesCount === 1 ? 'like' : 'likes'}
+          </p>
+        )}
+
+        {/* View post link */}
+        <Link
+          to={`/${post.type}s/${post.id}`}
+          className="text-sm text-gray-500 hover:text-purple-600 mt-1 block"
+        >
+          View all {post.commentsCount || 0} comments
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function UserProfileCard({ user }: { user: any }) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-6">
+      <div className="flex items-center space-x-3">
+        <Link to={`/u/${user.username}`}>
+          <img
+            src={user.avatar}
+            alt={user.name}
+            className="w-14 h-14 rounded-full ring-2 ring-gray-100"
+          />
+        </Link>
+        <div className="flex-1">
+          <Link to={`/u/${user.username}`} className="block">
+            <p className="font-semibold text-gray-900 hover:text-purple-600">
+              {user.name}
+            </p>
+            <p className="text-sm text-gray-500">@{user.username}</p>
+          </Link>
+        </div>
+      </div>
+      
+      <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+        <div>
+          <p className="text-lg font-semibold text-gray-900">{user.snippetsCount || 0}</p>
+          <p className="text-xs text-gray-500">Snippets</p>
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-gray-900">{user.followersCount || 0}</p>
+          <p className="text-xs text-gray-500">Followers</p>
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-gray-900">{user.followingCount || 0}</p>
+          <p className="text-xs text-gray-500">Following</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SuggestionsCard({ suggestions }: { suggestions: any[] }) {
+  if (suggestions.length === 0) return null;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-900">Suggested for you</h3>
+        <Link to="/explore?type=users" className="text-sm text-purple-600 hover:text-purple-700">
+          See All
+        </Link>
+      </div>
+      
+      <div className="space-y-3">
+        {suggestions.slice(0, 5).map((suggestion: any) => (
+          <div key={suggestion.id} className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Link to={`/u/${suggestion.username}`}>
+                <img
+                  src={suggestion.avatar}
+                  alt={suggestion.name}
+                  className="w-8 h-8 rounded-full"
+                />
+              </Link>
+              <div>
+                <Link
+                  to={`/u/${suggestion.username}`}
+                  className="text-sm font-medium text-gray-900 hover:text-purple-600"
+                >
+                  {suggestion.username}
+                </Link>
+                <p className="text-xs text-gray-500">{suggestion.mutualCount} mutual connections</p>
+              </div>
+            </div>
+            <button className="px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors">
+              Follow
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TrendingCard() {
+  const trendingTags = [
+    { name: 'react', count: 245 },
+    { name: 'javascript', count: 189 },
+    { name: 'python', count: 156 },
+    { name: 'nextjs', count: 134 },
+    { name: 'typescript', count: 98 },
+  ];
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-6">
+      <h3 className="font-semibold text-gray-900 mb-4">Trending Today</h3>
+      
+      <div className="space-y-3">
+        {trendingTags.map((tag, index) => (
+          <Link
+            key={tag.name}
+            to={`/explore?tag=${tag.name}`}
+            className="flex items-center justify-between hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors"
+          >
+            <div>
+              <p className="text-sm font-medium text-gray-900">#{tag.name}</p>
+              <p className="text-xs text-gray-500">{tag.count} posts</p>
+            </div>
+            <span className="text-xs font-medium text-purple-600">#{index + 1}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyFeed({ user }: { user: any }) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center">
+      <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <Code className="w-10 h-10 text-purple-600" />
+      </div>
+      <h3 className="text-xl font-semibold text-gray-900 mb-2">Welcome to CodeGram!</h3>
+      <p className="text-gray-600 mb-6">
+        Start following developers and discover amazing code snippets, documentation, and stories.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Link
+          to="/explore"
+          className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium"
+        >
+          Explore CodeGram
+        </Link>
+        <Link
+          to="/snippets/new"
+          className="px-6 py-3 border border-purple-600 text-purple-600 rounded-xl hover:bg-purple-50 transition-colors font-medium"
+        >
+          Share Your First Snippet
+        </Link>
       </div>
     </div>
   );
