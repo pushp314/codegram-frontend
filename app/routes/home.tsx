@@ -1,8 +1,8 @@
 import { LoaderFunctionArgs, json } from "@remix-run/node";
-import { useLoaderData, Link } from "@remix-run/react";
+import { useLoaderData, Link, useFetcher } from "@remix-run/react";
 import { requireAuth } from "~/utils/auth.server";
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Code, FileText } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BugStories from "~/components/Bugs/BugStories";
 import AppLayout from "~/components/Layout/AppLayout";
 
@@ -17,11 +17,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
-      fetch(`${BACKEND_URL}/api/stories/active`, {
+      fetch(`${BACKEND_URL}/api/bugs?page=1&limit=5`, { // Update to use bugs endpoint
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
-      fetch(`${BACKEND_URL}/api/users/suggestions`, {
+      fetch(`${BACKEND_URL}/api/follow/suggestions?limit=5`, {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
@@ -52,7 +52,7 @@ export default function Home() {
           {/* Main Feed */}
           <div className="lg:col-span-2 space-y-6">
             {/* Stories */}
-            <BugStories stories={stories.data} currentUser={user} />
+            <BugStories stories={stories.data || stories.bugs || []} currentUser={user} />
 
             {/* Feed Posts */}
             <div className="space-y-6">
@@ -72,7 +72,7 @@ export default function Home() {
             <UserProfileCard user={user} />
             
             {/* Suggestions */}
-            <SuggestionsCard suggestions={suggestions.data} />
+            <SuggestionsCard suggestions={suggestions.data || suggestions.users || []} />
 
             {/* Trending Tags */}
             <TrendingCard />
@@ -84,16 +84,85 @@ export default function Home() {
 }
 
 function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
-  const [isLiked, setIsLiked] = useState(post.isLiked);
-  const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
+  const [isLiked, setIsLiked] = useState(post.isLiked || false);
+  const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked || false);
+  const [likesCount, setLikesCount] = useState(post.likesCount || 0);
   const [showComments, setShowComments] = useState(false);
+  const fetcher = useFetcher();
+
+  const handleLike = async () => {
+    const newLikedState = !isLiked;
+    setIsLiked(newLikedState);
+    setLikesCount((prev: number) => newLikedState ? prev + 1 : prev - 1);
+
+    // Submit to backend
+    const formData = new FormData();
+    formData.append('action', 'toggle-like');
+    formData.append('contentType', post.type);
+    formData.append('contentId', post.id);
+    
+    fetcher.submit(formData, { method: 'POST', action: '/api/interactions' });
+  };
+
+  const handleBookmark = async () => {
+    const newBookmarkedState = !isBookmarked;
+    setIsBookmarked(newBookmarkedState);
+
+    // Submit to backend
+    const formData = new FormData();
+    formData.append('action', 'toggle-bookmark');
+    formData.append('contentType', post.type);
+    formData.append('contentId', post.id);
+    
+    fetcher.submit(formData, { method: 'POST', action: '/api/interactions' });
+  };
 
   const getPostIcon = (type: string) => {
     switch (type) {
       case 'snippet': return <Code className="w-4 h-4" />;
       case 'doc': return <FileText className="w-4 h-4" />;
+      case 'bug': return <Code className="w-4 h-4" />; // or use Bug icon if imported
       default: return <Code className="w-4 h-4" />;
     }
+  };
+
+  const getContentPreview = () => {
+    if (post.type === 'snippet' && post.content) {
+      return (
+        <div className="mx-4 mb-4 bg-gray-900 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-gray-800 text-gray-300 text-xs font-medium">
+            {post.language}
+          </div>
+          <pre className="p-4 text-sm text-gray-100 overflow-x-auto max-h-40">
+            <code>{post.content.substring(0, 200)}...</code>
+          </pre>
+        </div>
+      );
+    } else if (post.type === 'doc' && post.content) {
+      return (
+        <div className="mx-4 mb-4 prose prose-sm max-w-none">
+          <div className="text-gray-700 line-clamp-4">
+            {post.content.substring(0, 300)}...
+          </div>
+        </div>
+      );
+    } else if (post.type === 'bug' && post.description) {
+      return (
+        <div className="mx-4 mb-4">
+          <p className="text-gray-700 line-clamp-3">{post.description}</p>
+          {post.severity && (
+            <span className={`inline-block mt-2 px-2 py-1 text-xs rounded-full ${
+              post.severity === 'HIGH' ? 'bg-red-100 text-red-700' :
+              post.severity === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+              'bg-green-100 text-green-700'
+            }`}>
+              {post.severity}
+            </span>
+          )}
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -103,7 +172,7 @@ function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
         <div className="flex items-center space-x-3">
           <Link to={`/u/${post.author.username}`}>
             <img
-              src={post.author.avatar}
+              src={post.author.avatar || '/default-avatar.png'}
               alt={post.author.name}
               className="w-10 h-10 rounded-full ring-2 ring-gray-100"
             />
@@ -155,30 +224,21 @@ function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
         )}
       </div>
 
-      {/* Code Preview for Snippets */}
-      {post.type === 'snippet' && post.content && (
-        <div className="mx-4 mb-4 bg-gray-900 rounded-lg overflow-hidden">
-          <div className="px-4 py-2 bg-gray-800 text-gray-300 text-xs font-medium">
-            {post.language}
-          </div>
-          <pre className="p-4 text-sm text-gray-100 overflow-x-auto max-h-40">
-            <code>{post.content.substring(0, 200)}...</code>
-          </pre>
-        </div>
-      )}
+      {/* Content Preview */}
+      {getContentPreview()}
 
       {/* Post Actions */}
       <div className="px-4 py-3 border-t border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => setIsLiked(!isLiked)}
+              onClick={handleLike}
               className={`flex items-center space-x-1 transition-colors ${
                 isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
               }`}
             >
               <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="text-sm font-medium">{post.likesCount || 0}</span>
+              <span className="text-sm font-medium">{likesCount}</span>
             </button>
             
             <button
@@ -195,7 +255,7 @@ function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
           </div>
           
           <button
-            onClick={() => setIsBookmarked(!isBookmarked)}
+            onClick={handleBookmark}
             className={`transition-colors ${
               isBookmarked ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600'
             }`}
@@ -205,9 +265,9 @@ function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
         </div>
 
         {/* Like count */}
-        {post.likesCount > 0 && (
+        {likesCount > 0 && (
           <p className="text-sm font-medium text-gray-900 mt-2">
-            {post.likesCount} {post.likesCount === 1 ? 'like' : 'likes'}
+            {likesCount} {likesCount === 1 ? 'like' : 'likes'}
           </p>
         )}
 
@@ -226,35 +286,33 @@ function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
 function UserProfileCard({ user }: { user: any }) {
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6">
-      <div className="flex items-center space-x-3">
-        <Link to={`/u/${user.username}`}>
-          <img
-            src={user.avatar}
-            alt={user.name}
-            className="w-14 h-14 rounded-full ring-2 ring-gray-100"
-          />
-        </Link>
-        <div className="flex-1">
-          <Link to={`/u/${user.username}`} className="block">
-            <p className="font-semibold text-gray-900 hover:text-purple-600">
-              {user.name}
-            </p>
-            <p className="text-sm text-gray-500">@{user.username}</p>
-          </Link>
+      <div className="flex items-center space-x-4 mb-4">
+        <img
+          src={user.avatar || '/default-avatar.png'}
+          alt={user.name}
+          className="w-12 h-12 rounded-full"
+        />
+        <div>
+          <h3 className="font-semibold text-gray-900">{user.name}</h3>
+          <p className="text-sm text-gray-500">@{user.username}</p>
         </div>
       </div>
       
-      <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+      {user.bio && (
+        <p className="text-sm text-gray-700 mb-4">{user.bio}</p>
+      )}
+      
+      <div className="flex justify-between text-center">
         <div>
-          <p className="text-lg font-semibold text-gray-900">{user.snippetsCount || 0}</p>
+          <p className="font-semibold text-gray-900">{user._count?.snippets || 0}</p>
           <p className="text-xs text-gray-500">Snippets</p>
         </div>
         <div>
-          <p className="text-lg font-semibold text-gray-900">{user.followersCount || 0}</p>
+          <p className="font-semibold text-gray-900">{user._count?.followers || 0}</p>
           <p className="text-xs text-gray-500">Followers</p>
         </div>
         <div>
-          <p className="text-lg font-semibold text-gray-900">{user.followingCount || 0}</p>
+          <p className="font-semibold text-gray-900">{user._count?.following || 0}</p>
           <p className="text-xs text-gray-500">Following</p>
         </div>
       </div>
@@ -263,41 +321,31 @@ function UserProfileCard({ user }: { user: any }) {
 }
 
 function SuggestionsCard({ suggestions }: { suggestions: any[] }) {
-  if (suggestions.length === 0) return null;
+  if (!suggestions.length) return null;
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-900">Suggested for you</h3>
-        <Link to="/explore?type=users" className="text-sm text-purple-600 hover:text-purple-700">
-          See All
-        </Link>
-      </div>
-      
-      <div className="space-y-3">
-        {suggestions.slice(0, 5).map((suggestion: any) => (
-          <div key={suggestion.id} className="flex items-center justify-between">
+      <h3 className="font-semibold text-gray-900 mb-4">Suggested for you</h3>
+      <div className="space-y-4">
+        {suggestions.slice(0, 3).map((user: any) => (
+          <div key={user.id} className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Link to={`/u/${suggestion.username}`}>
-                <img
-                  src={suggestion.avatar}
-                  alt={suggestion.name}
-                  className="w-8 h-8 rounded-full"
-                />
-              </Link>
+              <img
+                src={user.avatar || '/default-avatar.png'}
+                alt={user.name}
+                className="w-10 h-10 rounded-full"
+              />
               <div>
-                <Link
-                  to={`/u/${suggestion.username}`}
-                  className="text-sm font-medium text-gray-900 hover:text-purple-600"
-                >
-                  {suggestion.username}
-                </Link>
-                <p className="text-xs text-gray-500">{suggestion.mutualCount} mutual connections</p>
+                <p className="font-medium text-gray-900 text-sm">{user.username}</p>
+                <p className="text-xs text-gray-500">{user._count?.followers || 0} followers</p>
               </div>
             </div>
-            <button className="px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors">
+            <Link
+              to={`/u/${user.username}`}
+              className="text-xs font-medium text-purple-600 hover:text-purple-700"
+            >
               Follow
-            </button>
+            </Link>
           </div>
         ))}
       </div>
@@ -306,28 +354,19 @@ function SuggestionsCard({ suggestions }: { suggestions: any[] }) {
 }
 
 function TrendingCard() {
-  const trendingTags = [
-    { name: 'react', count: 245 },
-    { name: 'javascript', count: 189 },
-    { name: 'python', count: 156 },
-    { name: 'nextjs', count: 134 },
-    { name: 'typescript', count: 98 },
-  ];
-
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6">
-      <h3 className="font-semibold text-gray-900 mb-4">Trending Today</h3>
-      
+      <h3 className="font-semibold text-gray-900 mb-4">Trending Tags</h3>
       <div className="space-y-3">
-        {trendingTags.map((tag, index) => (
+        {['javascript', 'react', 'typescript', 'python', 'nextjs'].map((tag, index) => (
           <Link
-            key={tag.name}
-            to={`/explore?tag=${tag.name}`}
-            className="flex items-center justify-between hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors"
+            key={tag}
+            to={`/explore?tag=${tag}`}
+            className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-lg -m-2"
           >
             <div>
-              <p className="text-sm font-medium text-gray-900">#{tag.name}</p>
-              <p className="text-xs text-gray-500">{tag.count} posts</p>
+              <p className="font-medium text-gray-900 text-sm">#{tag}</p>
+              <p className="text-xs text-gray-500">{Math.floor(Math.random() * 100) + 10} posts</p>
             </div>
             <span className="text-xs font-medium text-purple-600">#{index + 1}</span>
           </Link>
