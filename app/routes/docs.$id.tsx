@@ -210,7 +210,8 @@ export default function DocView() {
                 {/* Category Badge */}
                 <div className="mb-4">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    {getCategoryIcon(doc.category)} {doc.category}
+                    <span className="mr-1">{getCategoryIcon(doc.category)}</span>
+                    <span>{doc.category}</span>
                   </span>
                 </div>
 
@@ -322,53 +323,59 @@ export default function DocView() {
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      code: ({ node, inline, className, children, ...props }) => {
+                      code: ({ className, children, ...props }: any) => {
                         const match = /language-(\w+)/.exec(className || '');
-                        return !inline ? (
+                        const isInline = !match;
+                        
+                        if (isInline) {
+                          return (
+                            <code className="bg-gray-100 text-red-600 px-2 py-1 rounded text-sm font-medium" {...props}>
+                              {children}
+                            </code>
+                          );
+                        }
+                        
+                        return (
                           <pre className="bg-gray-900 text-gray-100 p-6 rounded-lg overflow-x-auto my-6">
                             <code className={className} {...props}>
                               {children}
                             </code>
                           </pre>
-                        ) : (
-                          <code className="bg-gray-100 text-red-600 px-2 py-1 rounded text-sm font-medium" {...props}>
-                            {children}
-                          </code>
                         );
                       },
-                      table: ({ children }) => (
+                      table: ({ children }: any) => (
                         <div className="overflow-x-auto my-6">
                           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
                             {children}
                           </table>
                         </div>
                       ),
-                      th: ({ children }) => (
+                      th: ({ children }: any) => (
                         <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {children}
                         </th>
                       ),
-                      td: ({ children }) => (
+                      td: ({ children }: any) => (
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-t border-gray-200">
                           {children}
                         </td>
                       ),
-                      blockquote: ({ children }) => (
+                      blockquote: ({ children }: any) => (
                         <blockquote className="border-l-4 border-blue-500 pl-6 my-6 text-gray-700 italic">
                           {children}
                         </blockquote>
                       ),
-                      h1: ({ children }) => (
+                      h1: ({ children }: any) => (
                         <h1 className="text-3xl font-bold text-gray-900 mt-8 mb-4 first:mt-0">
                           {children}
                         </h1>
                       ),
-                      h2: ({ children }) => (
+                      h2: ({ children }: any) => (
                         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">
                           {children}
                         </h2>
                       ),
-                      h3: ({ children }) => (
+                      h3: ({ children }: any) => (
                         <h3 className="text-xl font-bold text-gray-900 mt-6 mb-3">
                           {children}
                         </h3>

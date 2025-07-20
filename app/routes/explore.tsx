@@ -33,7 +33,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
-      fetch(`${BACKEND_URL}/api/trending?type=tags&limit=20`, {
+      fetch(`${BACKEND_URL}/api/search/tags?limit=20`, {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
@@ -48,12 +48,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const trendingLanguages = languagesRes.ok ? await languagesRes.json() : { data: [] };
 
     return json({
-      searchResults,
-      trendingTags,
-      trendingLanguages,
+      searchResults: searchResults || { data: [], total: 0 },
+      trendingTags: trendingTags || { data: [] },
+      trendingLanguages: trendingLanguages || { data: [] },
       filters: { query, type, language, tag, sortBy, page }
     });
   } catch (error) {
+    console.error('Loader error:', error);
     return json({
       searchResults: { data: [], total: 0 },
       trendingTags: { data: [] },
@@ -67,7 +68,13 @@ export default function Explore() {
   const { searchResults, trendingTags, trendingLanguages, filters } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(filters.query);
+  const [searchQuery, setSearchQuery] = useState(filters?.query || "");
+
+  // Safe data access with fallbacks
+  const safeSearchResults = searchResults || { data: [], total: 0 };
+  const safeTrendingTags = trendingTags || { data: [] };
+  const safeTrendingLanguages = trendingLanguages || { data: [] };
+  const safeFilters = filters || { query: "", type: "all", language: "", tag: "", sortBy: "recent", page: "1" };
 
   const contentTypes = [
     { value: "all", label: "All Content", icon: "🌐" },
@@ -154,7 +161,7 @@ export default function Explore() {
                 key={type.value}
                 onClick={() => updateFilter("type", type.value)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  filters.type === type.value
+                  safeFilters.type === type.value
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
@@ -176,14 +183,14 @@ export default function Explore() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
                 <select
-                  value={filters.language}
+                  value={safeFilters.language}
                   onChange={(e) => updateFilter("language", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Languages</option>
-                  {trendingLanguages.data.map((lang: any) => (
-                    <option key={lang.name} value={lang.name}>
-                      {lang.name} ({lang.count})
+                  {(safeTrendingLanguages.data || []).map((lang: any) => (
+                    <option key={lang.name || lang.tag} value={lang.name || lang.tag}>
+                      {lang.name || lang.tag} ({lang.count || 0})
                     </option>
                   ))}
                 </select>
@@ -193,14 +200,14 @@ export default function Explore() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tag</label>
                 <select
-                  value={filters.tag}
+                  value={safeFilters.tag}
                   onChange={(e) => updateFilter("tag", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Tags</option>
-                  {trendingTags.data.map((tag: any) => (
-                    <option key={tag.name} value={tag.name}>
-                      #{tag.name} ({tag.count})
+                  {(safeTrendingTags.data || []).map((tag: any) => (
+                    <option key={tag.name || tag.tag} value={tag.name || tag.tag}>
+                      #{tag.name || tag.tag} ({tag.count || 0})
                     </option>
                   ))}
                 </select>
@@ -210,7 +217,7 @@ export default function Explore() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
                 <select
-                  value={filters.sortBy}
+                  value={safeFilters.sortBy}
                   onChange={(e) => updateFilter("sort", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
@@ -244,21 +251,21 @@ export default function Explore() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {searchResults.total > 0 ? (
-                    <>Found {searchResults.total} results</>
+                  {(safeSearchResults.total || 0) > 0 ? (
+                    <>Found {safeSearchResults.total} results</>
                   ) : (
                     <>No results found</>
                   )}
                 </h2>
-                {filters.query && (
-                  <p className="text-gray-600">for "{filters.query}"</p>
+                {safeFilters.query && (
+                  <p className="text-gray-600">for "{safeFilters.query}"</p>
                 )}
               </div>
             </div>
 
             {/* Results */}
             <div className="space-y-4">
-              {searchResults.data.length === 0 ? (
+              {(safeSearchResults.data || []).length === 0 ? (
                 <div className="text-center py-12">
                   <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
@@ -273,19 +280,19 @@ export default function Explore() {
                   </button>
                 </div>
               ) : (
-                searchResults.data.map((item: any) => (
-                  <SearchResultCard key={item.id} item={item} type={item.type || filters.type} />
+                (safeSearchResults.data || []).map((item: any) => (
+                  <SearchResultCard key={item.id} item={item} type={item.type || safeFilters.type} />
                 ))
               )}
             </div>
 
             {/* Pagination */}
-            {searchResults.total > 20 && (
+            {(safeSearchResults.total || 0) > 20 && (
               <div className="flex justify-center mt-8">
                 <nav className="flex items-center space-x-2">
-                  {parseInt(filters.page) > 1 && (
+                  {parseInt(safeFilters.page) > 1 && (
                     <button
-                      onClick={() => updateFilter("page", (parseInt(filters.page) - 1).toString())}
+                      onClick={() => updateFilter("page", (parseInt(safeFilters.page) - 1).toString())}
                       className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
                     >
                       Previous
@@ -293,12 +300,12 @@ export default function Explore() {
                   )}
                   
                   <span className="px-3 py-2 text-sm text-gray-700">
-                    Page {filters.page} of {Math.ceil(searchResults.total / 20)}
+                    Page {safeFilters.page} of {Math.ceil((safeSearchResults.total || 0) / 20)}
                   </span>
                   
-                  {parseInt(filters.page) < Math.ceil(searchResults.total / 20) && (
+                  {parseInt(safeFilters.page) < Math.ceil((safeSearchResults.total || 0) / 20) && (
                     <button
-                      onClick={() => updateFilter("page", (parseInt(filters.page) + 1).toString())}
+                      onClick={() => updateFilter("page", (parseInt(safeFilters.page) + 1).toString())}
                       className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
                     >
                       Next
@@ -319,19 +326,22 @@ export default function Explore() {
                   Trending Tags
                 </h3>
                 <div className="space-y-2">
-                  {trendingTags.data.slice(0, 10).map((tag: any, index: number) => (
+                  {(safeTrendingTags.data || []).slice(0, 10).map((tag: any, index: number) => (
                     <button
-                      key={tag.name}
-                      onClick={() => updateFilter("tag", tag.name)}
+                      key={tag.name || tag.tag || `tag-${index}`}
+                      onClick={() => updateFilter("tag", tag.name || tag.tag)}
                       className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
                     >
                       <div className="flex items-center space-x-3">
                         <span className="text-sm font-medium text-gray-500">#{index + 1}</span>
-                        <span className="text-blue-600 font-medium">#{tag.name}</span>
+                        <span className="text-blue-600 font-medium">#{tag.name || tag.tag}</span>
                       </div>
-                      <span className="text-sm text-gray-500">{tag.count}</span>
+                      <span className="text-sm text-gray-500">{tag.count || 0}</span>
                     </button>
                   ))}
+                  {(safeTrendingTags.data || []).length === 0 && (
+                    <p className="text-gray-500 text-sm">No trending tags available</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -344,16 +354,19 @@ export default function Explore() {
                   Popular Languages
                 </h3>
                 <div className="space-y-2">
-                  {trendingLanguages.data.slice(0, 8).map((lang: any) => (
+                  {(safeTrendingLanguages.data || []).slice(0, 8).map((lang: any, index: number) => (
                     <button
-                      key={lang.name}
-                      onClick={() => updateFilter("language", lang.name)}
+                      key={lang.name || lang.tag || `lang-${index}`}
+                      onClick={() => updateFilter("language", lang.name || lang.tag)}
                       className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
                     >
-                      <span className="text-gray-700">{lang.name}</span>
-                      <span className="text-sm text-gray-500">{lang.count}</span>
+                      <span className="text-gray-700">{lang.name || lang.tag}</span>
+                      <span className="text-sm text-gray-500">{lang.count || 0}</span>
                     </button>
                   ))}
+                  {(safeTrendingLanguages.data || []).length === 0 && (
+                    <p className="text-gray-500 text-sm">No popular languages available</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -392,50 +405,64 @@ export default function Explore() {
 }
 
 function SearchResultCard({ item, type }: { item: any; type: string }) {
+  // Safe access to item properties
+  const safeItem = item || {};
+  const author = safeItem.author || {};
+  
   switch (type) {
     case 'snippets':
       return (
         <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <Link to={`/u/${item.author.username}`}>
-                <img
-                  src={item.author.avatar}
-                  alt={item.author.name}
-                  className="w-8 h-8 rounded-full"
-                />
-              </Link>
-              <div>
-                <Link
-                  to={`/u/${item.author.username}`}
-                  className="font-medium text-gray-900 hover:text-blue-600"
-                >
-                  {item.author.name}
+              {author.username && (
+                <Link to={`/u/${author.username}`}>
+                  <img
+                    src={author.avatar || '/default-avatar.png'}
+                    alt={author.name || 'User'}
+                    className="w-8 h-8 rounded-full"
+                  />
                 </Link>
-                <p className="text-sm text-gray-500">@{item.author.username}</p>
+              )}
+              <div>
+                {author.username && (
+                  <Link
+                    to={`/u/${author.username}`}
+                    className="font-medium text-gray-900 hover:text-blue-600"
+                  >
+                    {author.name || author.username}
+                  </Link>
+                )}
+                {author.username && (
+                  <p className="text-sm text-gray-500">@{author.username}</p>
+                )}
               </div>
             </div>
             <span className="text-sm text-gray-500">
-              {new Date(item.createdAt).toLocaleDateString()}
+              {safeItem.createdAt ? new Date(safeItem.createdAt).toLocaleDateString() : ''}
             </span>
           </div>
 
-          <Link to={`/snippets/${item.id}`} className="block">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
-              {item.title}
-            </h3>
-            {item.description && (
-              <p className="text-gray-600 mb-3">{item.description}</p>
-            )}
-          </Link>
+          {safeItem.id && (
+            <Link to={`/snippets/${safeItem.id}`} className="block">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
+                {safeItem.title || 'Untitled Snippet'}
+              </h3>
+              {safeItem.description && (
+                <p className="text-gray-600 mb-3">{safeItem.description}</p>
+              )}
+            </Link>
+          )}
 
           <div className="flex flex-wrap gap-2 mb-4">
-            <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
-              {item.language}
-            </span>
-            {item.tags?.slice(0, 3).map((tag: string) => (
+            {safeItem.language && (
+              <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                {safeItem.language}
+              </span>
+            )}
+            {(safeItem.tags || []).slice(0, 3).map((tag: string, index: number) => (
               <span
-                key={tag}
+                key={`${tag}-${index}`}
                 className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
               >
                 #{tag}
@@ -446,11 +473,79 @@ function SearchResultCard({ item, type }: { item: any; type: string }) {
           <div className="flex items-center space-x-4 text-sm text-gray-500">
             <span className="flex items-center space-x-1">
               <Heart className="w-4 h-4" />
-              <span>{item.likesCount || 0}</span>
+              <span>{safeItem.likesCount || safeItem._count?.likes || 0}</span>
             </span>
             <span className="flex items-center space-x-1">
               <Eye className="w-4 h-4" />
-              <span>{item.viewsCount || 0}</span>
+              <span>{safeItem.viewsCount || safeItem._count?.views || 0}</span>
+            </span>
+          </div>
+        </div>
+      );
+
+    case 'docs':
+      return (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              {author.username && (
+                <Link to={`/u/${author.username}`}>
+                  <img
+                    src={author.avatar || '/default-avatar.png'}
+                    alt={author.name || 'User'}
+                    className="w-8 h-8 rounded-full"
+                  />
+                </Link>
+              )}
+              <div>
+                {author.username && (
+                  <Link
+                    to={`/u/${author.username}`}
+                    className="font-medium text-gray-900 hover:text-blue-600"
+                  >
+                    {author.name || author.username}
+                  </Link>
+                )}
+                {author.username && (
+                  <p className="text-sm text-gray-500">@{author.username}</p>
+                )}
+              </div>
+            </div>
+            <span className="text-sm text-gray-500">
+              {safeItem.createdAt ? new Date(safeItem.createdAt).toLocaleDateString() : ''}
+            </span>
+          </div>
+
+          {safeItem.id && (
+            <Link to={`/docs/${safeItem.id}`} className="block">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
+                {safeItem.title || 'Untitled Documentation'}
+              </h3>
+              {safeItem.description && (
+                <p className="text-gray-600 mb-3">{safeItem.description}</p>
+              )}
+            </Link>
+          )}
+
+          <div className="flex flex-wrap gap-2 mb-4">
+            {(safeItem.tags || []).slice(0, 3).map((tag: string, index: number) => (
+              <span
+                key={`${tag}-${index}`}
+                className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex items-center space-x-4 text-sm text-gray-500">
+            <span className="flex items-center space-x-1">
+              <Heart className="w-4 h-4" />
+              <span>{safeItem.likesCount || safeItem._count?.likes || 0}</span>
+            </span>
+            <span className="flex items-center space-x-1">
+              <Eye className="w-4 h-4" />
+              <span>{safeItem.viewsCount || safeItem._count?.views || 0}</span>
             </span>
           </div>
         </div>
@@ -460,27 +555,33 @@ function SearchResultCard({ item, type }: { item: any; type: string }) {
       return (
         <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center space-x-4">
-            <Link to={`/u/${item.username}`}>
-              <img
-                src={item.avatar}
-                alt={item.name}
-                className="w-16 h-16 rounded-full"
-              />
-            </Link>
-            <div className="flex-1">
-              <Link
-                to={`/u/${item.username}`}
-                className="text-lg font-semibold text-gray-900 hover:text-blue-600"
-              >
-                {item.name}
+            {safeItem.username && (
+              <Link to={`/u/${safeItem.username}`}>
+                <img
+                  src={safeItem.avatar || '/default-avatar.png'}
+                  alt={safeItem.name || 'User'}
+                  className="w-16 h-16 rounded-full"
+                />
               </Link>
-              <p className="text-gray-500">@{item.username}</p>
-              {item.bio && (
-                <p className="text-gray-600 mt-1">{item.bio}</p>
+            )}
+            <div className="flex-1">
+              {safeItem.username && (
+                <Link
+                  to={`/u/${safeItem.username}`}
+                  className="text-lg font-semibold text-gray-900 hover:text-blue-600"
+                >
+                  {safeItem.name || safeItem.username}
+                </Link>
+              )}
+              {safeItem.username && (
+                <p className="text-gray-500">@{safeItem.username}</p>
+              )}
+              {safeItem.bio && (
+                <p className="text-gray-600 mt-1">{safeItem.bio}</p>
               )}
               <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                <span>{item.snippetsCount || 0} snippets</span>
-                <span>{item.followersCount || 0} followers</span>
+                <span>{safeItem.snippetsCount || safeItem._count?.snippets || 0} snippets</span>
+                <span>{safeItem.followersCount || safeItem._count?.followers || 0} followers</span>
               </div>
             </div>
           </div>

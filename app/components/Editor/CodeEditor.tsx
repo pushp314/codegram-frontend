@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import Editor from '@monaco-editor/react';
 import { Copy, Check, Maximize2, Minimize2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { ClientOnly } from '../ClientOnly';
 
 interface CodeEditorProps {
   value: string;
@@ -12,6 +12,107 @@ interface CodeEditorProps {
   readOnly?: boolean;
   showCopyButton?: boolean;
   showFullscreenButton?: boolean;
+}
+
+// Create a separate component for the actual editor
+function MonacoEditor({
+  value,
+  onChange,
+  language,
+  height,
+  readOnly,
+  onMount
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  language: string;
+  height: string;
+  readOnly: boolean;
+  onMount: (editor: any, monaco: any) => void;
+}) {
+  // Dynamic import of Monaco Editor
+  const [Editor, setEditor] = useState<any>(null);
+
+  useEffect(() => {
+    import('@monaco-editor/react').then((module) => {
+      setEditor(() => module.default);
+    });
+  }, []);
+
+  if (!Editor) {
+    return (
+      <div 
+        className="flex items-center justify-center bg-gray-900 text-white"
+        style={{ height }}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+          <p>Loading editor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Editor
+      height={height}
+      defaultLanguage={language}
+      language={language}
+      value={value}
+      theme="codegram-dark"
+      onChange={onChange}
+      onMount={onMount}
+      options={{
+        minimap: { enabled: false },
+        fontSize: 14,
+        fontFamily: "'Fira Code', 'Consolas', 'Monaco', monospace",
+        lineNumbers: 'on',
+        roundedSelection: false,
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+        wordWrap: 'on',
+        tabSize: 2,
+        insertSpaces: true,
+        formatOnPaste: true,
+        formatOnType: true,
+        readOnly,
+        cursorBlinking: 'smooth',
+        cursorSmoothCaretAnimation: 'on',
+        smoothScrolling: true,
+        contextmenu: !readOnly,
+        selectOnLineNumbers: true,
+        lineDecorationsWidth: 10,
+        lineNumbersMinChars: 3,
+        glyphMargin: false,
+        folding: true,
+        foldingStrategy: 'indentation',
+        showFoldingControls: 'always',
+        unfoldOnClickAfterEndOfLine: false,
+        bracketPairColorization: {
+          enabled: true
+        },
+        guides: {
+          bracketPairs: true,
+          indentation: true
+        },
+        suggest: {
+          showKeywords: true,
+          showSnippets: true,
+          showClasses: true,
+          showFunctions: true,
+          showVariables: true
+        },
+        quickSuggestions: {
+          other: true,
+          comments: false,
+          strings: false
+        },
+        acceptSuggestionOnCommitCharacter: true,
+        acceptSuggestionOnEnter: 'on',
+        accessibilitySupport: 'auto'
+      }}
+    />
+  );
 }
 
 export default function CodeEditor({
@@ -143,64 +244,30 @@ export default function CodeEditor({
         </div>
 
         {/* Editor */}
-        <Editor
-          height={isFullscreen ? 'calc(100vh - 48px)' : height}
-          defaultLanguage={language}
-          language={language}
-          value={value}
-          theme="codegram-dark"
-          onChange={handleEditorChange}
-          onMount={handleEditorDidMount}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            fontFamily: "'Fira Code', 'Consolas', 'Monaco', monospace",
-            lineNumbers: 'on',
-            roundedSelection: false,
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            wordWrap: 'on',
-            tabSize: 2,
-            insertSpaces: true,
-            formatOnPaste: true,
-            formatOnType: true,
-            readOnly,
-            cursorBlinking: 'smooth',
-            cursorSmoothCaretAnimation: 'on',
-            smoothScrolling: true,
-            contextmenu: !readOnly,
-            selectOnLineNumbers: true,
-            lineDecorationsWidth: 10,
-            lineNumbersMinChars: 3,
-            glyphMargin: false,
-            folding: true,
-            foldingStrategy: 'indentation',
-            showFoldingControls: 'always',
-            unfoldOnClickAfterEndOfLine: false,
-            bracketPairColorization: {
-              enabled: true
-            },
-            guides: {
-              bracketPairs: true,
-              indentation: true
-            },
-            suggest: {
-              showKeywords: true,
-              showSnippets: true,
-              showClasses: true,
-              showFunctions: true,
-              showVariables: true
-            },
-            quickSuggestions: {
-              other: true,
-              comments: false,
-              strings: false
-            },
-            acceptSuggestionOnCommitCharacter: true,
-            acceptSuggestionOnEnter: 'on',
-            accessibilitySupport: 'auto'
-          }}
-        />
+        <ClientOnly
+          fallback={
+            <div 
+              className="flex items-center justify-center bg-gray-900 text-white"
+              style={{ height: isFullscreen ? 'calc(100vh - 48px)' : height }}
+            >
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                <p>Loading editor...</p>
+              </div>
+            </div>
+          }
+        >
+          {() => (
+            <MonacoEditor
+              value={value}
+              onChange={handleEditorChange}
+              language={language}
+              height={isFullscreen ? 'calc(100vh - 48px)' : height}
+              readOnly={readOnly}
+              onMount={handleEditorDidMount}
+            />
+          )}
+        </ClientOnly>
       </div>
     </div>
   );

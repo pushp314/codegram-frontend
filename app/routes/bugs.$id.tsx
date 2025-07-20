@@ -225,10 +225,12 @@ export default function BugView() {
                 {/* Priority and Type Badges */}
                 <div className="flex items-center space-x-3 mb-4">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(bug.priority)}`}>
-                    {getPriorityIcon(bug.priority)} {bug.priority} priority
+                    <span className="mr-1">{getPriorityIcon(bug.priority)}</span>
+                    <span>{bug.priority} priority</span>
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    {getTypeIcon(bug.type)} {bug.type}
+                    <span className="mr-1">{getTypeIcon(bug.type)}</span>
+                    <span>{bug.type}</span>
                   </span>
                   {timeLeft && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
@@ -449,7 +451,7 @@ export default function BugView() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Reactions</span>
                     <span className="font-medium">
-                      {bug.reactions ? Object.values(bug.reactions).reduce((a: any, b: any) => a + b, 0) : 0}
+                      {bug.reactions ? Object.values(bug.reactions).reduce((a: number, b: any) => a + Number(b), 0) : 0}
                     </span>
                   </div>
                 </div>

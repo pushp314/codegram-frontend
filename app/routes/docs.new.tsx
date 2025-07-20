@@ -399,33 +399,39 @@ You've successfully built your first app! 🎉
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code: ({ node, inline, className, children, ...props }) => {
+                        code: ({ className, children, ...props }: any) => {
                           const match = /language-(\w+)/.exec(className || '');
-                          return !inline ? (
+                          const isInline = !match;
+                          
+                          if (isInline) {
+                            return (
+                              <code className="bg-gray-100 text-red-600 px-1 py-0.5 rounded text-sm" {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+                          
+                          return (
                             <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
                               <code className={className} {...props}>
                                 {children}
                               </code>
                             </pre>
-                          ) : (
-                            <code className="bg-gray-100 text-red-600 px-1 py-0.5 rounded text-sm" {...props}>
-                              {children}
-                            </code>
                           );
                         },
-                        table: ({ children }) => (
+                        table: ({ children }: any) => (
                           <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
                               {children}
                             </table>
                           </div>
                         ),
-                        th: ({ children }) => (
+                        th: ({ children }: any) => (
                           <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {children}
                           </th>
                         ),
-                        td: ({ children }) => (
+                        td: ({ children }: any) => (
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-t border-gray-200">
                             {children}
                           </td>
@@ -485,7 +491,9 @@ You've successfully built your first app! 🎉
                     <p className="text-gray-600 mt-1">Inline code</p>
                   </div>
                   <div>
-                    <code className="bg-gray-100 px-2 py-1 rounded">```js<br/>code<br/>```</code>
+                    <code className="bg-gray-100 px-2 py-1 rounded">
+                      ```js<br/>code<br/>```
+                    </code>
                     <p className="text-gray-600 mt-1">Code block</p>
                   </div>
                   <div>
