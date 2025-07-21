@@ -1,10 +1,11 @@
 import { LoaderFunctionArgs, json } from "@remix-run/node";
 import { useLoaderData, Link, useFetcher } from "@remix-run/react";
 import { requireAuth } from "~/utils/auth.server";
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Code, FileText } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Code, FileText, Bug } from "lucide-react";
+import { useState } from "react";
 import BugStories from "~/components/Bugs/BugStories";
-import AppLayout from "~/components/Layout/AppLayout";
+// Remove this import since sidebar is now global:
+// import AppLayout from "~/components/Layout/AppLayout";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireAuth(request);
@@ -17,7 +18,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
-      fetch(`${BACKEND_URL}/api/bugs?page=1&limit=5`, { // Update to use bugs endpoint
+      fetch(`${BACKEND_URL}/api/bugs?page=1&limit=5`, {
         headers: { Cookie: cookie || "" },
         credentials: "include",
       }),
@@ -46,40 +47,39 @@ export default function Home() {
   const { user, feed, stories, suggestions } = useLoaderData<typeof loader>();
 
   return (
-    <AppLayout user={user}>
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Feed */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Stories */}
-            <BugStories stories={stories.data || stories.bugs || []} currentUser={user} />
+    // Remove AppLayout wrapper - it's now handled globally
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Feed */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Stories */}
+          <BugStories stories={stories.data || stories.bugs || []} currentUser={user} />
 
-            {/* Feed Posts */}
-            <div className="space-y-6">
-              {feed.data.length === 0 ? (
-                <EmptyFeed user={user} />
-              ) : (
-                feed.data.map((post: any) => (
-                  <FeedPost key={post.id} post={post} currentUser={user} />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="hidden lg:block space-y-6">
-            {/* User Profile Card */}
-            <UserProfileCard user={user} />
-            
-            {/* Suggestions */}
-            <SuggestionsCard suggestions={suggestions.data || suggestions.users || []} />
-
-            {/* Trending Tags */}
-            <TrendingCard />
+          {/* Feed Posts */}
+          <div className="space-y-6">
+            {feed.data.length === 0 ? (
+              <EmptyFeed user={user} />
+            ) : (
+              feed.data.map((post: any) => (
+                <FeedPost key={post.id} post={post} currentUser={user} />
+              ))
+            )}
           </div>
         </div>
+
+        {/* Right Sidebar */}
+        <div className="hidden lg:block space-y-6">
+          {/* User Profile Card */}
+          <UserProfileCard user={user} />
+          
+          {/* Suggestions */}
+          <SuggestionsCard suggestions={suggestions.data || suggestions.users || []} />
+
+          {/* Trending Tags */}
+          <TrendingCard />
+        </div>
       </div>
-    </AppLayout>
+    </div>
   );
 }
 
@@ -95,7 +95,6 @@ function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
     setIsLiked(newLikedState);
     setLikesCount((prev: number) => newLikedState ? prev + 1 : prev - 1);
 
-    // Submit to backend
     const formData = new FormData();
     formData.append('action', 'toggle-like');
     formData.append('contentType', post.type);
@@ -108,7 +107,6 @@ function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
     const newBookmarkedState = !isBookmarked;
     setIsBookmarked(newBookmarkedState);
 
-    // Submit to backend
     const formData = new FormData();
     formData.append('action', 'toggle-bookmark');
     formData.append('contentType', post.type);
@@ -121,7 +119,7 @@ function FeedPost({ post, currentUser }: { post: any; currentUser: any }) {
     switch (type) {
       case 'snippet': return <Code className="w-4 h-4" />;
       case 'doc': return <FileText className="w-4 h-4" />;
-      case 'bug': return <Code className="w-4 h-4" />; // or use Bug icon if imported
+      case 'bug': return <Bug className="w-4 h-4" />;
       default: return <Code className="w-4 h-4" />;
     }
   };

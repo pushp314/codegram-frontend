@@ -26,18 +26,26 @@ interface AppLayoutProps {
     username: string;
     avatar: string;
   };
+  showMobileHeader?: boolean;
+  customPadding?: boolean;
 }
 
-export default function AppLayout({ children, user }: AppLayoutProps) {
+export default function AppLayout({ 
+  children, 
+  user, 
+  showMobileHeader = true,
+  customPadding = true 
+}: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Enhanced navigation with page-specific logic
   const navigation = [
     { name: 'Home', href: '/home', icon: Home, isActive: location.pathname === '/home' },
-    { name: 'Search', href: '/explore', icon: Search, isActive: location.pathname === '/explore' },
-    { name: 'Explore', href: '/explore?type=trending', icon: Compass, isActive: location.pathname.startsWith('/explore') },
+    { name: 'Search', href: '/search', icon: Search, isActive: location.pathname === '/search' },
+    { name: 'Explore', href: '/explore', icon: Compass, isActive: location.pathname.startsWith('/explore') },
     { name: 'Notifications', href: '/notifications', icon: Heart, isActive: location.pathname === '/notifications' },
     { name: 'Messages', href: '/messages', icon: MessageCircle, isActive: location.pathname === '/messages' },
     { name: 'Create', href: '#', icon: PlusSquare, isActive: false, hasMenu: true },
@@ -58,10 +66,19 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await fetch('/logout', { method: 'POST' });
+      navigate('/login');
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-gray-200 lg:bg-white lg:pt-5 lg:pb-4">
+      {/* Desktop Sidebar - Fixed positioning for global use */}
+      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-gray-200 lg:bg-white lg:pt-5 lg:pb-4 lg:z-30">
         <div className="flex items-center flex-shrink-0 px-6">
           <Link to="/home" className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
@@ -150,13 +167,19 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
                   <p className="text-xs text-gray-500">@{user.username}</p>
                 </Link>
               </div>
-              <div className="ml-3">
+              <div className="ml-3 flex space-x-1">
                 <Link
                   to="/settings"
                   className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <Settings className="w-4 h-4" />
                 </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -164,40 +187,42 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Link to="/home" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-              <Code className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              CodeGram
-            </span>
-          </Link>
-
-          <div className="flex items-center space-x-4">
-            <Link to="/notifications" className="relative p-2">
-              <Heart className="w-6 h-6 text-gray-700" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                3
+      {showMobileHeader && (
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3">
+            <Link to="/home" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                <Code className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                CodeGram
               </span>
             </Link>
-            <Link to="/messages" className="p-2">
-              <MessageCircle className="w-6 h-6 text-gray-700" />
-            </Link>
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2"
-            >
-              {isMobileMenuOpen ? (
-                <X className="w-6 h-6 text-gray-700" />
-              ) : (
-                <Menu className="w-6 h-6 text-gray-700" />
-              )}
-            </button>
+
+            <div className="flex items-center space-x-4">
+              <Link to="/notifications" className="relative p-2">
+                <Heart className="w-6 h-6 text-gray-700" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  3
+                </span>
+              </Link>
+              <Link to="/messages" className="p-2">
+                <MessageCircle className="w-6 h-6 text-gray-700" />
+              </Link>
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-6 h-6 text-gray-700" />
+                ) : (
+                  <Menu className="w-6 h-6 text-gray-700" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -253,7 +278,10 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
                 <Settings className="mr-3 h-6 w-6" />
                 Settings
               </Link>
-              <button className="flex items-center w-full px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 rounded-xl">
+              <button 
+                onClick={handleSignOut}
+                className="flex items-center w-full px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 rounded-xl"
+              >
                 <LogOut className="mr-3 h-6 w-6" />
                 Sign Out
               </button>
@@ -263,14 +291,14 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
       )}
 
       {/* Main Content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
-        <main className="flex-1 pt-16 lg:pt-0">
+      <div className={`flex flex-col flex-1 ${customPadding ? 'lg:pl-64' : ''}`}>
+        <main className={`flex-1 ${showMobileHeader ? 'pt-16 lg:pt-0' : ''}`}>
           {children}
         </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-30">
         <div className="flex items-center justify-around">
           {navigation.slice(0, 5).map((item) => (
             <Link

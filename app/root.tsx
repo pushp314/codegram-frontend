@@ -11,6 +11,7 @@ import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Toaster } from "react-hot-toast";
 import { getUserFromSession } from "~/utils/auth.server";
+import GlobalLayout from "~/components/Layout/GlobalLayout";
 
 import "./tailwind.css";
 
@@ -37,6 +38,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export default function App() {
+  const { user } = useLoaderData<typeof loader>();
+
   return (
     <html lang="en" className="h-full">
       <head>
@@ -46,7 +49,9 @@ export default function App() {
         <Links />
       </head>
       <body className="h-full bg-gray-50">
-        <Outlet />
+        <GlobalLayout user={user}>
+          <Outlet />
+        </GlobalLayout>
         <Toaster 
           position="top-center"
           toastOptions={{
